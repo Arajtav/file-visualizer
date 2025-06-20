@@ -13,12 +13,22 @@ enum Mode {
     Plot,
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+#[clap(rename_all = "kebab-case")]
+enum Normalization {
+    Max,
+    MinMax,
+}
+
 #[derive(Parser, Debug)]
 #[command(long_about = None)]
 struct Args {
     /// Mode
-    #[arg(short, long)]
     mode: Mode,
+
+    /// Normalization method
+    #[arg(long, default_value = "max")]
+    normalization: Normalization,
 
     /// Input file
     file: PathBuf,
@@ -34,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = File::create(&args.out)?;
 
     match args.mode {
-        Mode::Plot => plot(file, out)?,
+        Mode::Plot => plot(file, out, &args.normalization)?,
     }
     Ok(())
 }
