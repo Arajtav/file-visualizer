@@ -1,11 +1,17 @@
-use std::path::PathBuf;
+mod plot;
 
 use clap::Parser;
 use clap::ValueEnum;
+use std::fs::File;
+use std::path::PathBuf;
+
+use crate::plot::plot;
 
 #[derive(Debug, Clone, ValueEnum)]
 #[clap(rename_all = "lower")]
-enum Mode {}
+enum Mode {
+    Plot,
+}
 
 #[derive(Parser, Debug)]
 #[command(long_about = None)]
@@ -21,6 +27,14 @@ struct Args {
     out: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    let file = File::open(&args.file)?;
+    let out = File::create(&args.out)?;
+
+    match args.mode {
+        Mode::Plot => plot(file, out)?,
+    }
+    Ok(())
 }
