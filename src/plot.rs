@@ -10,17 +10,15 @@ pub fn plot(mut input: File, mut output: File, normalization: &Normalization) ->
     let mut buf = [0u8; BUFFER_SIZE];
 
     loop {
-        let len = input.read(&mut buf)? & !1;
-        if len == 0 {
+        if input.read(&mut buf)? < 2 {
             break;
         }
-        for pair in buf[..len].chunks(2) {
+        for pair in buf.chunks_exact(2) {
             let x = pair[1] as usize;
             let y = pair[0] as usize;
-            raw[(x << 8) + y] += 1;
+            raw[(x << 8) | y] += 1;
         }
     }
-
     let max = *raw.iter().max().unwrap() as f32;
     let data = match normalization {
         Normalization::Max => {
