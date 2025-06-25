@@ -30,6 +30,10 @@ struct Args {
     #[arg(long, default_value = "max")]
     normalization: Normalization,
 
+    /// Whether to, during the normalization, ignore the most frequent value.
+    #[arg(long, short, default_value_t = false)]
+    ignore_most_frequent: bool,
+
     /// Input file
     file: PathBuf,
 
@@ -44,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = File::create(&args.out)?;
 
     match args.mode {
-        Mode::Plot => plot(file, out, &args.normalization)?,
+        Mode::Plot => plot(file, out, &args.normalization, args.ignore_most_frequent)?,
     }
     Ok(())
 }

@@ -5,7 +5,12 @@ use crate::Normalization;
 
 const BUFFER_SIZE: usize = 4194304;
 
-pub fn plot(mut input: File, mut output: File, normalization: &Normalization) -> ImageResult<()> {
+pub fn plot(
+    mut input: File,
+    mut output: File,
+    normalization: &Normalization,
+    ignore_most_frequent: bool,
+) -> ImageResult<()> {
     let mut raw = [0u32; 256 * 256];
     let mut buf = [0u8; BUFFER_SIZE];
 
@@ -19,7 +24,29 @@ pub fn plot(mut input: File, mut output: File, normalization: &Normalization) ->
             raw[(x << 8) | y] += 1;
         }
     }
-    let max = *raw.iter().max().unwrap() as f32;
+
+    let max = if ignore_most_frequent {
+        let mut first_max = 0u32;
+        let mut second_max = 0u32;
+        for &val in raw.iter() {
+            if val > first_max {
+                second_max = first_max;
+                first_max = val;
+                continue;
+            }
+            if val < first_max && val > second_max {
+                second_max = val;
+            }
+        }
+        for val in raw.iter_mut() {
+            if *val == first_max {
+                *val = second_max;
+            }
+        }
+        second_max
+    } else {
+        *raw.iter().max().unwrap()
+    } as f32;
     let data = match normalization {
         Normalization::Max => {
             let mul = 255.0 / max;
