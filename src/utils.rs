@@ -1,30 +1,12 @@
-use image::{ExtendedColorType, ImageEncoder, ImageResult, codecs::png::PngEncoder};
-use std::{fs::File, io::Read};
+use std::io::Read;
 
 use crate::Normalization;
 
-const BUFFER_SIZE: usize = 4194304;
-
-pub fn plot(
-    mut input: File,
-    mut output: File,
-    normalization: &Normalization,
+pub fn normalize_2d<const L: usize>(
+    mut raw: [u32; L],
+    mode: Normalization,
     ignore_most_frequent: bool,
-) -> ImageResult<()> {
-    let mut raw = [0u32; 256 * 256];
-    let mut buf = [0u8; BUFFER_SIZE];
-
-    loop {
-        if input.read(&mut buf)? < 2 {
-            break;
-        }
-        for pair in buf.chunks_exact(2) {
-            let x = pair[1] as usize;
-            let y = pair[0] as usize;
-            raw[(x << 8) | y] += 1;
-        }
-    }
-
+) -> [u8; L] {
     let max = if ignore_most_frequent {
         let mut first_max = 0u32;
         let mut second_max = 0u32;
@@ -47,7 +29,7 @@ pub fn plot(
     } else {
         *raw.iter().max().unwrap()
     } as f32;
-    let data = match normalization {
+    match mode {
         Normalization::Max => {
             let mul = 255.0 / max;
             raw.map(|val| (val as f32 * mul).round() as u8)
@@ -57,7 +39,43 @@ pub fn plot(
             let mul = 255.0 / (max - min);
             raw.map(|val| ((val as f32 - min) * mul).round() as u8)
         }
-    };
+    }
+}
 
-    PngEncoder::new(&mut output).write_image(&data, 256, 256, ExtendedColorType::L8)
+pub struct File {
+    file: std::fs::File,
+    buf: Box<[u8; 4194304]>,
+    pos: usize,
+    end: usize,
+}
+
+impl File {
+    pub fn new(file: std::fs::File) -> Self {
+        Self {
+            file,
+            buf: Box::new([0; _]),
+            pos: 0,
+            end: 0,
+        }
+    }
+}
+
+impl Iterator for File {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos >= self.end {
+            match self.file.read(self.buf.as_mut_slice()) {
+                Ok(0) => return None,
+                Ok(n) => {
+                    self.pos = 0;
+                    self.end = n;
+                }
+                Err(_) => return None,
+            }
+        }
+        let byte = self.buf[self.pos];
+        self.pos += 1;
+        Some(byte)
+    }
 }

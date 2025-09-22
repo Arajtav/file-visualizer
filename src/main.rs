@@ -1,19 +1,20 @@
-mod plot;
+mod adjacency;
+mod utils;
 
 use clap::Parser;
 use clap::ValueEnum;
 use std::fs::File;
 use std::path::PathBuf;
 
-use crate::plot::plot;
+use crate::adjacency::adjacency;
 
 #[derive(Debug, Clone, ValueEnum)]
 #[clap(rename_all = "lower")]
 enum Mode {
-    Plot,
+    Adjacency,
 }
 
-#[derive(Debug, Clone, ValueEnum)]
+#[derive(Debug, Clone, ValueEnum, Copy)]
 #[clap(rename_all = "kebab-case")]
 enum Normalization {
     Max,
@@ -48,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = File::create(&args.out)?;
 
     match args.mode {
-        Mode::Plot => plot(file, out, &args.normalization, args.ignore_most_frequent)?,
+        Mode::Adjacency => adjacency(file, out, args.normalization, args.ignore_most_frequent)?,
     }
     Ok(())
 }
